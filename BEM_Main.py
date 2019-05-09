@@ -15,12 +15,13 @@ import pandas as pd
 #----------Start: user should only change this block-----------
 #--------------------------------------------------------------
 #Setup
-N_ann_reg = 50         #Number of annuli
+N_ann_reg = 500         #Number of annuli
 N_ann_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,11, 12]
 Dis_method = 'constant'   #Discretisation method, ('cosine' or 'constant')
 case = 'turbine'        #'turbine' or 'propeller'
 convergence_test = False
 Optimise = True
+SaveGeo = True          #Only works if optimise is on
 #--------------------------------------------------------------
 #----------End: user should only change this block-------------
 #--------------------------------------------------------------
@@ -147,6 +148,16 @@ for annulus in range(0,N_ann_reg):                                    #***CHANGE
         fnorm_opti = V.CT_opt*0.5*V.rho*V.U0**2*Area/V.Nblades/V.R/(r2_R-r1_R)
         results_opt[annulus,:] = Opt(case, fnorm_opti, V.U0, r1_R, r2_R, V.R, V.rootradius_R, V.tipradius_R, Omega, V.Nblades, V.rho, polar_alpha, polar_cl, polar_cd, V.TSR)
 
+#Plot results
+areas = (r_R[1:]**2-r_R[:-1]**2)*np.pi*V.R**2
+dr = (r_R[1:]-r_R[:-1])*V.R
+CT = np.sum(dr*results[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+CP = np.sum(dr*results[:,4]*results[:,2]*V.Nblades*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
+if Optimise:
+    CT_opt = np.sum(dr*results_opt[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+    CP_opt = np.sum(dr*results_opt[:,4]*results_opt[:,2]*V.Nblades*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
+
+
 #Location Upwind
 P_inf = 101325 #Pascal
 P0 = P_inf + (0.5*V.rho*V.U0)
@@ -167,15 +178,6 @@ P_Total_RD = P_RotorD + (0.5*V.rho*(results[:,14]*2+results[:,15]*2))
         
 #Location DownWind
 P_Total_Dinf = P_Total_RD
-
-#Plot results
-areas = (r_R[1:]**2-r_R[:-1]**2)*np.pi*V.R**2
-dr = (r_R[1:]-r_R[:-1])*V.R
-CT = np.sum(dr*results[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
-CP = np.sum(dr*results[:,4]*results[:,2]*V.Nblades*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
-if Optimise:
-    CT_opt = np.sum(dr*results_opt[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
-    CP_opt = np.sum(dr*results_opt[:,4]*results_opt[:,2]*V.Nblades*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
 
 print('CP is ', CP)
 print('CT is ', CT)
@@ -303,8 +305,8 @@ if Optimise:
 
     fig_force_opt = plt.figure(figsize=(12,6))
     plt.title(r'Normal and tangential force for optimised turbine, non-dimensionalised by $\frac{1}{2} \rho U_\infty^2 R$')
-    plt.plot(results_opt[:,2], results_opt[:,3]/(0.5*V.U0**2*V.rho*V.R), 'k-', label=r'$\alpha_{opt}$')
-    plt.plot(results_opt[:,2], results_opt[:,4]/(0.5*V.U0**2*V.rho*V.R), 'g--', label='optimal')       #***CHANGE***
+    plt.plot(results_opt[:,2], results_opt[:,3]/(0.5*V.U0**2*V.rho*V.R), 'k-', label='fnorm')
+    plt.plot(results_opt[:,2], results_opt[:,4]/(0.5*V.U0**2*V.rho*V.R), 'g--', label='ftan')       #***CHANGE***
     plt.grid()
     plt.xlabel('r/R')
     plt.legend()
@@ -341,3 +343,13 @@ if convergence_test==False:
     plt.xlabel('r/R')
     plt.legend()
     plt.show()
+    
+#--------------------------------------------------------------
+#----------Save chord and twist distribution-------------------
+#--------------------------------------------------------------
+if Optimise:
+    if SaveGeo:
+        Head = 'X    Twist    Chord'
+        file_path = 'GeoOptimal'+case+'.dat'
+        SaveMat = results_opt[:,[2,7,8]]
+        np.savetxt(file_path, SaveMat, fmt='%f', header=Head)
