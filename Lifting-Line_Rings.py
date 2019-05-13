@@ -32,15 +32,11 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, plot=False):
     #Calculate 4-dimensional matrix
     zero_offset = np.zeros([len(chord_U), 1, 1])
     
-    offset_U_int = (n_t)*[chord_U]
-    offset_U = np.array(offset_U_int)
-    offset_U = offset_U.reshape([len(chord_U), n_t, 1])
+    offset_U = np.ones([1, n_t, 1])*chord_U.reshape([len(chord_U), 1, 1])
     offset_U = np.concatenate((zero_offset,offset_U),axis=1)
     
-    offset_B_int = (n_t)*[chord_B]
-    offset_B = np.array(offset_B_int)
-    offset_B = offset_B.reshape([len(chord_B), n_t, 1])
-    offset_B = np.concatenate((zero_offset,offset_B),axis=1)
+    offset_B = np.ones([1, n_t, 1])*np.fliplr(chord_B).reshape([len(chord_B), 1, 1])
+    offset_B = np.concatenate((offset_B, zero_offset),axis=1)
     
     xw_U = t*U_w + offset_U
     yw_U = -r_U*np.sin(omega*t+theta_0)
@@ -60,23 +56,23 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, plot=False):
     if plot:
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-#        ax.plot(Rings[40,:,0,0], Rings[40,:,0,1], Rings[40,:,0,2], 'b-')
+#        ax.plot(Rings[25,:,0,0], Rings[25,:,0,1], Rings[25,:,0,2], 'b-')
 
         for Blade in range(NBlades):
             for Radial_Point in range(0,len(r_U),10):
-                ax.plot(Rings[Radial_Point,:n_t,Blade,0], Rings[Radial_Point,:n_t,Blade,1], Rings[Radial_Point,:n_t,Blade,2], 'b-')
+                ax.plot(Rings[Radial_Point,:,Blade,0], Rings[Radial_Point,:,Blade,1], Rings[Radial_Point,:,Blade,2], 'b-')
                 
         plt.show()
     return Rings
 
 #Defined elsewhere
 omega = 10
-U_infty = 100
+U_infty = 10
 
 #Define input parameters
-n_t = 400
+n_t = 200
 n_r = 1
-a_w = 0.2
+a_w = 0
 
 NBlades = 3
 filename = 'GeoOptimalturbine.dat'
