@@ -30,7 +30,7 @@ def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma):
                 Umatrix[icp,jring] = U
                 Vmatrix[icp,jring] = V
                 Wmatrix[icp,jring] = W
-    return [Umatrix, Vmatrix, Wmatrix]
+    return [np.matrix(Umatrix), np.matrix(Vmatrix), np.matrix(Wmatrix)]
 
 
 
