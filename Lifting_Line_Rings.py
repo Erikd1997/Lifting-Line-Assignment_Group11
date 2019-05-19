@@ -93,36 +93,38 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
         plt.show()
     return Rings
 
-#Defined elsewhere
-omega = 10
-U_infty = 100
-
-#Define input parameters
-n_t = 200
-n_r = 1
-a_w = 0
-Radius = 50
-
-NBlades = 3
-filename = 'GeoOptimalturbine.dat'
-Mat = np.loadtxt(filename, dtype='float',skiprows = 1)
-
-R = Mat[:,0]
-R_int = list(R)
-R_int.insert(0, R[0]-(R[5]-R[4])/2)
-R_int.insert(len(R_int),R[-1]+(R[5]-R[4])/2)
-R = np.array(R_int)
-
-Twist = Mat[:,1]
-Twist_int = list(Twist)
-Twist_int.insert(0, Twist[0]-(Twist[1]-Twist[0])/2)
-Twist_int.insert(len(Twist_int),Twist[-1]+(Twist[-1]-Twist[-2])/2)
-Twist = np.array(Twist_int)
-
-Chord = Mat[:,2]
-Chord_int = list(Chord)
-Chord_int.insert(0, Chord[0]-(Chord[1]-Chord[0])/2)
-Chord_int.insert(len(Chord_int),Chord[-1]+(Chord[-1]-Chord[-2])/2)
-Chord = np.array(Chord_int)
-
-WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R*Radius, Chord, Twist, plot=True)
+# =============================================================================
+# #Defined elsewhere
+# omega = 10
+# U_infty = 100
+# 
+# #Define input parameters
+# n_t = 200
+# n_r = 1
+# a_w = 0
+# Radius = 50
+# 
+# NBlades = 3
+# filename = 'GeoOptimalturbine.dat'
+# Mat = np.loadtxt(filename, dtype='float',skiprows = 1)
+# 
+# R = Mat[:,0]
+# R_int = list(R)
+# R_int.insert(0, R[0]-(R[5]-R[4])/2)
+# R_int.insert(len(R_int),R[-1]+(R[5]-R[4])/2)
+# R = np.array(R_int)
+# 
+# Twist = Mat[:,1]
+# Twist_int = list(Twist)
+# Twist_int.insert(0, Twist[0]-(Twist[1]-Twist[0])/2)
+# Twist_int.insert(len(Twist_int),Twist[-1]+(Twist[-1]-Twist[-2])/2)
+# Twist = np.array(Twist_int)
+# 
+# Chord = Mat[:,2]
+# Chord_int = list(Chord)
+# Chord_int.insert(0, Chord[0]-(Chord[1]-Chord[0])/2)
+# Chord_int.insert(len(Chord_int),Chord[-1]+(Chord[-1]-Chord[-2])/2)
+# Chord = np.array(Chord_int)
+# 
+# WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R*Radius, Chord, Twist, plot=True)
+# =============================================================================
