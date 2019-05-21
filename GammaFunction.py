@@ -12,7 +12,7 @@ def newGamma(rho, U_infty, u, v, w, Omega, controlpoints, BigMatrix, twist, pola
     """
     Vaxial = U_infty + u
     
-    Blades = BigMatrix[0,0,:,0].reshape((1,len(BigMatrix[0,0,:,0])))
+    Blades = np.arange(len(BigMatrix[0,0,:,0]))
     theta_0 = (Blades) * 2*np.pi/(Blades[-1]+1)
     Vtan =  np.mat(np.zeros([len(controlpoints)*len(Blades), 1]))
     for i in range(len(controlpoints)):

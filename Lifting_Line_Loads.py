@@ -22,11 +22,11 @@ def loadBladeOverAllElements(rho, U_infty, u, v, Omega, controlpoints, twist, po
     cd = np.interp(alpha, polar_alpha, polar_cd)
     
     #From the force coefficients determine the lift and drag
-    lift = 0.5*rho*np.multiply(np.multiply(np.mulitply(Vp,Vp),cl),chord)
-    drag = 0.5*rho*np.multiply(np.multiply(np.mulitply(Vp,Vp),cd),chord)
-    fnorm = lift*np.cos(inflowangle)+drag*np.sin(inflowangle)
-    ftan = lift*np.sin(inflowangle)-drag*np.cos(inflowangle)
+    lift = 0.5*rho*np.multiply(np.multiply(np.multiply(Vp,Vp),cl),chord)
+    drag = 0.5*rho*np.multiply(np.multiply(np.multiply(Vp,Vp),cd),chord)
+    fnorm = np.multiply(lift,np.cos(inflowangle))+np.multiply(drag,np.sin(inflowangle))
+    ftan = np.multiply(lift,np.sin(inflowangle))-np.multiply(drag,np.cos(inflowangle))
     
 #    ct = ftan/(0.5*rho*np.multiply(np.multiply(Vp,Vp),chord))
 #    cn = fnorm/(0.5*rho*np.multiply(np.multiply(Vp,Vp),chord))
-    return fnorm, ftan, alpha, inflowangle#, ct, cn
+    return [fnorm, ftan, alpha, inflowangle]#, ct, cn
