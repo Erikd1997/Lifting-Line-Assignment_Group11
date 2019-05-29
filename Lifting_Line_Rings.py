@@ -5,10 +5,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
 def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=False):
-    #Plot limits
-    xmin = -1
-    xmax = 50
-    
+        
     #Calculate intermediate parameters
     L = 2*n_t+2
     Rings = np.zeros([len(R)-1, L, NBlades, 3])
@@ -46,11 +43,11 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
     
     xw_U = t*U_w + offset_U*np.sin(twist_U)
     yw_U = -r_U*np.sin(omega*t+theta_0) - offset_U*np.cos(twist_U)*np.cos(theta_0)
-    zw_U = r_U*np.cos(omega*t+theta_0) + offset_U*np.cos(twist_U)*np.sin(theta_0)
+    zw_U = r_U*np.cos(omega*t+theta_0) - offset_U*np.cos(twist_U)*np.sin(theta_0)
     
     xw_B = np.fliplr(t)*U_w + offset_B*np.sin(twist_B)
     yw_B = -r_B*np.sin(omega*np.fliplr(t)+theta_0) - offset_B*np.cos(twist_B)*np.cos(theta_0)
-    zw_B = r_B*np.cos(omega*np.fliplr(t)+theta_0) + offset_B*np.cos(twist_B)*np.sin(theta_0)
+    zw_B = r_B*np.cos(omega*np.fliplr(t)+theta_0) - offset_B*np.cos(twist_B)*np.sin(theta_0)
     
     xw = np.concatenate((xw_B, xw_U), axis=1)
     yw = np.concatenate((yw_B, yw_U), axis=1)
@@ -59,14 +56,19 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
     Rings[:,:,:,0] = xw
     Rings[:,:,:,1] = yw
     Rings[:,:,:,2] = zw
+    
+    #Plot limits
+    xmin = -1
+    xmax = t_end*U_w
+    
     if plot:
         fig = plt.figure()
         ax = fig.gca(projection='3d')
 #        ax.plot(Rings[25,:,0,0], Rings[25,:,0,1], Rings[25,:,0,2], 'b-')
-        for Blade in range(NBlades):
+        for Blade in range(2):
             #x, y and z location of quarter chord
             Bladex_c_4 = np.zeros((len(R),))
-            Bladey_c_4 = R*np.sin(theta_0[0,0,Blade])
+            Bladey_c_4 = -R*np.sin(theta_0[0,0,Blade])
             Bladez_c_4 = R*np.cos(theta_0[0,0,Blade])
             
             #x, y and z location of the left part of the blade
@@ -87,9 +89,11 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
             ax.plot(Bladex_c_4,Bladey_c_4,Bladez_c_4, 'k--')
             ax.plot(Bladex, Bladey, Bladez, 'k-')
             
-            for Radial_Point in range(0,len(r_U),5):
+            for Radial_Point in range(0,len(r_U),int(len(r_U)/2)-1):
                 ax.plot(Rings[Radial_Point,:,Blade,0], Rings[Radial_Point,:,Blade,1], Rings[Radial_Point,:,Blade,2], 'b-')
-        ax.set_xlim([xmin, xmax])      
+        ax.set_xlim([xmin, xmax])   
+#        ax.set_ylim([-15,15])
+#        ax.set_zlim([-15,15])
         plt.show()
     return Rings
 
