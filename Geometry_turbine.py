@@ -15,4 +15,4 @@ rootradius_R = 0.2  # root radius
 tipradius_R = 1     # Tip radius
 U0 = 10  # in m/s
 CT_opt = 0.75
-TSR = 10  # lambda (6, 8 or 10)??
+TSR = 6  # lambda (6, 8 or 10)??

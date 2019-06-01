@@ -36,8 +36,10 @@ reload = False
 order = 3
 
 #Vortex wake parameters
-n_r = 25
+n_r = 20
 n_pr = 40
+n_r_list = [1,5,10,20,50,100]
+lines = ['-x','-o','-s','-d','-^']
 a_w_init = 0.1
 case = 'turbine'           #Choice between 'turbine' and 'propeller'
 
@@ -45,15 +47,17 @@ case = 'turbine'           #Choice between 'turbine' and 'propeller'
 n_iterations = 20
 Error_margin = 0.0001
 
-BEM_compare = True         #Always false if Double_rotor = True
+#Program modes
+Sensitivity = True        #Only runs if Double_rotor and BEM_compare == False
+BEM_compare = False       #Always false if Double_rotor = True
 Plot = False
 show_results_BEM = False
 
 #Model setup for double rotor configuration
-Double_rotor = True         #Set to True for double rotor configuration
-L_sep = 1000000000          #Separation distance between two rotors expressed 
+Double_rotor = False         #Set to True for double rotor configuration
+L_sep = 1          #Separation distance between two rotors expressed 
                             #in rotor diameter
-phase_dif = 0               #Phase difference in degrees                            
+phase_dif = 0              #Phase difference in degrees                            
 
 #-----------------------------------------------
 #-------------(End) Setup Block-----------------
@@ -147,8 +151,15 @@ polar_cl = data1['Cl']
 polar_cd = data1['Cd']
 
 #Define total number of points in on lifting line wake
-n_t = n_r*n_pr
-
+if not Sensitivity:
+    n_t = n_r*n_pr
+else:
+    n_t_lst = np.array(n_r_list)*n_pr
+    CT_sens = np.zeros((len(n_t_lst),1))
+    CP_sens = np.zeros((len(n_t_lst),1))
+    Gamma_sens = np.zeros((len(n_t_lst),Ncp))
+    Fnorm_sens = np.zeros((len(n_t_lst),Ncp))
+    Ftan_sens = np.zeros((len(n_t_lst),Ncp))
 print('Lifting line method for '+case+' has started')
 
 #-----------------------------------------------
@@ -158,38 +169,38 @@ print('Lifting line method for '+case+' has started')
 #-----------------------------------------------
 #-(Start) Main block 1: Initialise circulation--
 #-----------------------------------------------
-
-#Setup initial vortex wake structure
-t_VW_0 = time.time()
-if Double_rotor:
-    Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif, plot=True)
-else:
-    Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, plot=True)
-
-
-t_VW_end = time.time()
-print('Vortex wake geometry is determined in ', t_VW_end-t_VW_0,' seconds')
-
-#Setup Biot-Savart induction matrix for Gamma = 1
-if Double_rotor:
-    [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1, double=True, phase_dif=phase_dif, d_sep=L_sep)
-else:
-    [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
-t_ind_end = time.time()
-print('Induced velocity matrices are calculated in ',t_ind_end-t_VW_end,' seconds')
-
-#Initial estimate for circulation (with zero induced velocity)
-t_Gamma_0 = time.time()
-Uind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
-Vind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
-Wind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
-if Double_rotor:
-    Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
-else:
-    Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
-t_Gamma_end = time.time()
-print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
-
+if not Sensitivity:
+    #Setup initial vortex wake structure
+    t_VW_0 = time.time()
+    if Double_rotor:
+        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
+    else:
+        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
+    
+    
+    t_VW_end = time.time()
+    print('Vortex wake geometry is determined in ', t_VW_end-t_VW_0,' seconds')
+    
+    #Setup Biot-Savart induction matrix for Gamma = 1
+    if Double_rotor:
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1, double=True, phase_dif=phase_dif, d_sep=L_sep)
+    else:
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+    t_ind_end = time.time()
+    print('Induced velocity matrices are calculated in ',t_ind_end-t_VW_end,' seconds')
+    
+    #Initial estimate for circulation (with zero induced velocity)
+    t_Gamma_0 = time.time()
+    Uind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
+    Vind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
+    Wind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
+    if Double_rotor:
+        Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
+    else:
+        Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+    t_Gamma_end = time.time()
+    print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
+    
 #-----------------------------------------------
 #--(End) Main block 1: Initialise circulation---
 #-----------------------------------------------
@@ -197,62 +208,59 @@ print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
 #-----------------------------------------------
 #---(Start) Main block 2: Iterate circulation---
 #-----------------------------------------------
-
-#Calculate induced velocity
-i_iter = 1
-Error_old = 1
-while i_iter < n_iterations:
-    Uind = Ind_Vel_Mat_u*Gamma
-    Vind = Ind_Vel_Mat_v*Gamma
-    Wind = Ind_Vel_Mat_w*Gamma
     
-    #Update vortex rings with new a_w
-    if Double_rotor:
-        a_w = float(np.average(Uind)/V.U0)
-        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
-    else:
-        a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
-        a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
-        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
-    
-    if Double_rotor:
-        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1, double=True, phase_dif=phase_dif, d_sep=L_sep)
-    else:
-        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+    #Calculate induced velocity
+    i_iter = 1
+    Error_old = 1
+    while i_iter < n_iterations:
+        Uind = Ind_Vel_Mat_u*Gamma
+        Vind = Ind_Vel_Mat_v*Gamma
+        Wind = Ind_Vel_Mat_w*Gamma
         
-    #Determine new circulation
-    if Double_rotor:
-        GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
-    else:
-        GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
-
-    #Calculate error
-#    Error = np.sqrt(sum(np.multiply((GammaNew - Gamma),(GammaNew - Gamma))))/len(Gamma)
-
-    #Different solution convergence check
-    referror = max(abs(GammaNew))
-    referror = max(referror,0.001)
-    Error = max(abs(GammaNew-Gamma))
-    Error = Error/referror   
-    
-    #Update the circulation
-    Gamma = GammaNew
-    
-    if Error < Error_margin:
-        print('Error is ', np.round(float(Error),5))
-        break
-
-
-    #Determine if gamma is converging
-    if Error < Error_old:
-        print('Error is ', np.round(float(Error),5), 'and Gamma is converging with: ',np.round(float(Error-Error_old),5))
-    else:
-        print('Error is ', np.round(float(Error),5), 'and Gamma is diverging with: +',np.round(float(Error-Error_old),5))
+        #Update vortex rings with new a_w
+        if Double_rotor:
+            a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
+            a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
+            Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
+        else:
+            a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
+            a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
+            Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
         
-    Error_old = Error
-    print(i_iter)
-    i_iter += 1
-
+        if Double_rotor:
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1, double=True, phase_dif=phase_dif, d_sep=L_sep)
+        else:
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+            
+        #Determine new circulation
+        if Double_rotor:
+            GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
+        else:
+            GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+    
+        #Calculate error
+        referror = max(abs(GammaNew))
+        referror = max(referror,0.001)
+        Error = max(abs(GammaNew-Gamma))
+        Error = Error/referror   
+        
+        #Update the circulation
+        Gamma = GammaNew
+        
+        if Error < Error_margin:
+            print('Error is ', np.round(float(Error),5))
+            break
+    
+        #Determine if gamma is converging
+        if Error < Error_old:
+            print('Error is ', np.round(float(Error),5), 'and Gamma is converging with: ',np.round(float(Error-Error_old),5))
+        else:
+            print('Error is ', np.round(float(Error),5), 'and Gamma is diverging with: +',np.round(float(Error-Error_old),5))
+            
+        Error_old = Error
+        print(i_iter)
+        i_iter += 1
+    
 #-----------------------------------------------
 #----(End) Main block 2: Iterate circulation----
 #-----------------------------------------------
@@ -260,13 +268,13 @@ while i_iter < n_iterations:
 #-----------------------------------------------
 #-----(Start) Main block 3: Calculate Loads-----
 #-----------------------------------------------
-
-#One simple function to obtain [fnorm, ftan, AoA, AngleInflow]
-if Double_rotor:
-    results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake, double=False, phase_dif=phase_dif)
-else:
-    results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake)
-
+    
+    #One simple function to obtain [fnorm, ftan, AoA, AngleInflow]
+    if Double_rotor:
+        results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake, double=True, phase_dif=phase_dif)
+    else:
+        results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake)
+    
 #-----------------------------------------------
 #------(End) Main block 3: Calculate Loads------
 #-----------------------------------------------
@@ -274,119 +282,236 @@ else:
 #-----------------------------------------------
 #---(Start) Post: Process results and display---
 #-----------------------------------------------
-
-#Average results if double rotor configuration is used
-if Double_rotor:
-    Fnorm = np.zeros((V.Nblades*n_rotors, Ncp))
-    Ftan = np.zeros((V.Nblades*n_rotors, Ncp))
-    alpha = np.zeros((V.Nblades*n_rotors, Ncp))
-    inflow = np.zeros((V.Nblades*n_rotors, Ncp))
-    Vax = np.zeros((V.Nblades*n_rotors, Ncp))
-    Vtan = np.zeros((V.Nblades*n_rotors, Ncp))
-    Gamma_blade = np.zeros((V.Nblades*n_rotors, Ncp))
-    for i in range(V.Nblades*n_rotors):
-        Fnorm[i,:] = results[0][i*Ncp:(i+1)*Ncp].reshape((1,Ncp))
-        Ftan[i,:] = results[1][i*Ncp:(i+1)*Ncp].reshape((1,Ncp))
-        alpha[i,:] = results[2][i*Ncp:(i+1)*Ncp].reshape((1,Ncp))
-        inflow[i,:] = results[3][i*Ncp:(i+1)*Ncp].reshape((1,Ncp))
-        Vax[i,:] = results[4][i*Ncp:(i+1)*Ncp].reshape((1,Ncp))
-        Vtan[i,:] = results[5][i*Ncp:(i+1)*Ncp].reshape((1,Ncp))
-        Gamma_blade[i,:] = Gamma[i*Ncp:(i+1)*Ncp].reshape((1,Ncp))
-    Fnorm = np.average(Fnorm, axis=0)
-    Ftan = np.average(Ftan, axis=0)
-    alpha = np.average(alpha, axis=0)
-    inflow = np.average(inflow, axis=0)
-    Vax = np.average(Vax, axis=0)
-    Vtan = np.average(Vtan, axis=0)
-    Gamma_blade = np.average(Gamma_blade, axis=0)
-        
-else:
-    Fnorm = results[0][:Ncp]
-    Ftan = results[1][:Ncp]
-    alpha = results[2][:Ncp] 
-    inflow = results[3][:Ncp]
-    Vax = results[4][:Ncp]
-    Vtan = results[5][:Ncp]   
-    Gamma_blade = Gamma[:Ncp]
-
-#Calculate thrust and power coefficient
-dr = (R_disL[1:]-R_disL[:-1])*V.R
-CT = np.sum(dr*np.array(Fnorm).reshape((Ncp,))*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
-CP = np.sum(dr*np.array(Ftan).reshape((Ncp,))*np.array(controlpoints).reshape((Ncp,))*V.R*V.Nblades*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
-print('LL CT = ', np.round(CT,4))
-print('LL CP = ', np.round(CP,4))
-if Plot:
-    #Axial induction factor versus radius  
-    a_i = 1 - Vax/V.U0
-    aline = Vtan.reshape((Ncp,1))/(Omega*controlpoints*V.R) - 1
     
-    fig_a = plt.figure(figsize=(12,6))
-    ax_a = plt.gca()
-    plt.title('Axial induction factor')
-    plt.plot(controlpoints, a_i, 'r-x', label=r'$a$ - LL')
-    plt.plot(controlpoints, aline, 'g--x', label=r'$a^,$')
-    plt.grid()
-    plt.xlabel('r/R')
-    plt.legend()
-    plt.show()
+    #Average results if double rotor configuration is used
+    if Double_rotor:
+        Fnorm = results[0]
+        Ftan = results[1]
+        alpha = results[2]
+        inflow = results[3]
+        Vax = results[4]
+        Vtan = results[5]   
+        Gamma_blade = Gamma
+               
+    else:
+        Fnorm = results[0][:Ncp]
+        Ftan = results[1][:Ncp]
+        alpha = results[2][:Ncp] 
+        inflow = results[3][:Ncp]
+        Vax = results[4][:Ncp]
+        Vtan = results[5][:Ncp]   
+        Gamma_blade = Gamma[:Ncp]
     
-    #Normal and tangential forces
-    fig_force = plt.figure(figsize=(12,6))
-    ax_force = plt.gca()
-    plt.title(r'Normal and tangential force, non-dimensionalised by $\frac{1}{2} \rho U_\infty^2 R$')
-    plt.plot(controlpoints, Fnorm/(0.5*V.U0**2*V.rho*V.R), 'r-x', label=r'Fnorm - LL')
-    plt.plot(controlpoints, Ftan/(0.5*V.U0**2*V.rho*V.R), 'g--x', label=r'Ftan - LL')
-    plt.grid()
-    plt.xlabel('r/R')
-    plt.legend()
-    plt.show()
-        
-    #Circulation distribution
-    fig_circ = plt.figure(figsize=(12,6))
-    ax_circ = plt.gca()
-    plt.title(r'Circulation distribution, non-dimensionalised by $\frac{\pi U_\infty^2}{\Omega * NBlades}$')
-    plt.plot(controlpoints, Gamma_blade/(np.pi*V.U0**2/(V.Nblades*Omega)), 'r-x', label=r'$\Gamma$ - LL')
-    plt.grid()
-    plt.xlabel('r/R')
-    plt.legend()
-    plt.show()
+    if not Double_rotor: 
+        #Calculate thrust and power coefficient
+        dr = (R_disL[1:]-R_disL[:-1])*V.R
+        CT = np.sum(dr*np.array(Fnorm).reshape((Ncp,))*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+        CP = np.sum(dr*np.array(Ftan).reshape((Ncp,))*np.array(controlpoints).reshape((Ncp,))*V.R*V.Nblades*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
+        print('LL CT = ', np.round(CT,4))
+        print('LL CP = ', np.round(CP,4))
     
-    #Inflow distribution
-    fig_inflow = plt.figure(figsize=(12,6))
-    ax_inflow = plt.gca()
-    plt.title('Angle distribution')
-    plt.plot(controlpoints, inflow*180/np.pi, 'r-x', label='Inflowangle - LL')
-    plt.plot(controlpoints, Twist_cp, 'g-s', label='Twist - LL')
-    plt.plot(controlpoints, alpha, 'k-x', label=r'$\alpha$ - LL')
-    plt.grid()
-    plt.ylabel('(deg)')
-    plt.xlabel('r/R')
-    plt.legend()
-    plt.show()
-
-if BEM_compare:
-    CT_BEM = np.sum(dr*results_BEM[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
-    CP_BEM = np.sum(dr*results_BEM[:,4]*np.array(controlpoints).reshape((Ncp,))*V.R*V.Nblades*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
-
-    print('BEM CT = ', np.round(CT_BEM,4))
-    print('BEM CP = ', np.round(CP_BEM,4))
-    if Plot:
-        ax_a.plot(controlpoints, results_BEM[:,0], 'k-o', label=r'$a$ - BEM')
-        ax_a.plot(controlpoints, results_BEM[:,1], 'k--o', label=r'$a^,$ - BEM')
-        ax_a.legend()
-    
-        ax_force.plot(controlpoints, results_BEM[:,3]/(0.5*V.U0**2*V.rho*V.R), 'k-o', label=r'Fnorm - BEM')
-        ax_force.plot(controlpoints, results_BEM[:,4]/(0.5*V.U0**2*V.rho*V.R), 'k--o', label=r'Ftan - BEM')
-        ax_force.legend()    
+        if Plot:
+            #Axial induction factor versus radius  
+            a_i = 1 - Vax/V.U0
+            aline = Vtan.reshape((Ncp,1))/(Omega*controlpoints*V.R) - 1
+            
+            fig_a = plt.figure(figsize=(12,6))
+            ax_a = plt.gca()
+            plt.title('Axial induction factor')
+            plt.plot(controlpoints, a_i, 'r-x', label=r'$a$ - LL')
+            plt.plot(controlpoints, aline, 'g--x', label=r'$a^,$')
+            plt.grid()
+            plt.xlabel('r/R')
+            plt.legend()
+            plt.show()
+            
+            #Normal and tangential forces
+            fig_force = plt.figure(figsize=(12,6))
+            ax_force = plt.gca()
+            plt.title(r'Normal and tangential force, non-dimensionalised by $\frac{1}{2} \rho U_\infty^2 R$')
+            plt.plot(controlpoints, Fnorm/(0.5*V.U0**2*V.rho*V.R), 'r-x', label=r'Fnorm - LL')
+            plt.plot(controlpoints, Ftan/(0.5*V.U0**2*V.rho*V.R), 'g--x', label=r'Ftan - LL')
+            plt.grid()
+            plt.xlabel('r/R')
+            plt.legend()
+            plt.show()
+                
+            #Circulation distribution
+            fig_circ = plt.figure(figsize=(12,6))
+            ax_circ = plt.gca()
+            plt.title(r'Circulation distribution, non-dimensionalised by $\frac{\pi U_\infty^2}{\Omega * NBlades}$')
+            plt.plot(controlpoints, Gamma_blade/(np.pi*V.U0**2/(V.Nblades*Omega)), 'r-x', label=r'$\Gamma$ - LL')
+            plt.grid()
+            plt.xlabel('r/R')
+            plt.legend()
+            plt.show()
+            
+            #Inflow distribution
+            fig_inflow = plt.figure(figsize=(12,6))
+            ax_inflow = plt.gca()
+            plt.title('Angle distribution')
+            plt.plot(controlpoints, inflow*180/np.pi, 'r-x', label='Inflowangle - LL')
+            plt.plot(controlpoints, Twist_cp, 'g-s', label='Twist - LL')
+            plt.plot(controlpoints, alpha, 'k-x', label=r'$\alpha$ - LL')
+            plt.grid()
+            plt.ylabel('(deg)')
+            plt.xlabel('r/R')
+            plt.legend()
+            plt.show()
         
-        ax_circ.plot(controlpoints, results_BEM[:,5]/(np.pi*V.U0**2/(V.Nblades*Omega)), 'k--o', label=r'$\Gamma$ - BEM')
-        ax_circ.legend()
+        if BEM_compare:
+            CT_BEM = np.sum(dr*results_BEM[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+            CP_BEM = np.sum(dr*results_BEM[:,4]*np.array(controlpoints).reshape((Ncp,))*V.R*V.Nblades*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
         
-        ax_inflow.plot(controlpoints, results_BEM[:,7]*180/np.pi, 'r--o', label='Inflowangle - BEM')
-        ax_inflow.plot(controlpoints, results_BEM[:,6], 'k--o', label=r'$\alpha$ - BEM')
-        ax_inflow.legend()
+            print('BEM CT = ', np.round(CT_BEM,4))
+            print('BEM CP = ', np.round(CP_BEM,4))
+            if Plot:
+                ax_a.plot(controlpoints, results_BEM[:,0], 'k-o', label=r'$a$ - BEM')
+                ax_a.plot(controlpoints, results_BEM[:,1], 'k--o', label=r'$a^,$ - BEM')
+                ax_a.legend()
+            
+                ax_force.plot(controlpoints, results_BEM[:,3]/(0.5*V.U0**2*V.rho*V.R), 'k-o', label=r'Fnorm - BEM')
+                ax_force.plot(controlpoints, results_BEM[:,4]/(0.5*V.U0**2*V.rho*V.R), 'k--o', label=r'Ftan - BEM')
+                ax_force.legend()    
+                
+                ax_circ.plot(controlpoints, results_BEM[:,5]/(np.pi*V.U0**2/(V.Nblades*Omega)), 'k--o', label=r'$\Gamma$ - BEM')
+                ax_circ.legend()
+                
+                ax_inflow.plot(controlpoints, results_BEM[:,7]*180/np.pi, 'r--o', label='Inflowangle - BEM')
+                ax_inflow.plot(controlpoints, results_BEM[:,6], 'k--o', label=r'$\alpha$ - BEM')
+                ax_inflow.legend()
+    else:
+        dr = np.array(V.Nblades*list((R_disL[1:]-R_disL[:-1])*V.R))
+        CT = np.sum(dr*np.array(Fnorm[:V.Nblades*Ncp]).reshape((V.Nblades*Ncp,))/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+        CP = np.sum(dr*np.array(Ftan[:V.Nblades*Ncp]).reshape((V.Nblades*Ncp,))*np.array(controlpoints_all[:V.Nblades*Ncp]).reshape((V.Nblades*Ncp,))*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
+        print('LL two-rotor CT = ', np.round(CT,4))
+        print('LL two-rotor CP = ', np.round(CP,4))
+            
 #-----------------------------------------------
 #----(End) Post: Process results and display----
+#-----------------------------------------------
+###############################################################################
+#-----------------------------------------------
+#-------(Start) Sensitivity to wakelength-------
+#-----------------------------------------------
+#Repeat similar steps for sensitivity plots as was done in main program
+else:
+    for i in range(len(n_r_list)):
+        n_t = n_t_lst[i]
+        #Setup initial vortex wake structure
+        t_VW_0 = time.time()
+        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
+        t_VW_end = time.time()
+        print('Vortex wake geometry is determined in ', t_VW_end-t_VW_0,' seconds')
+        
+        #Setup Biot-Savart induction matrix for Gamma = 1
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+        t_ind_end = time.time()
+        print('Induced velocity matrices are calculated in ',t_ind_end-t_VW_end,' seconds')
+        
+        #Initial estimate for circulation (with zero induced velocity)
+        t_Gamma_0 = time.time()
+        Uind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
+        Vind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
+        Wind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
+        Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+        t_Gamma_end = time.time()
+        print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
+    
+        #Calculate induced velocity
+        i_iter = 1
+        Error_old = 1
+        while i_iter < n_iterations:
+            Uind = Ind_Vel_Mat_u*Gamma
+            Vind = Ind_Vel_Mat_v*Gamma
+            Wind = Ind_Vel_Mat_w*Gamma
+            
+            #Update vortex rings with new a_w
+            a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
+            a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
+            Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
+            
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+                
+            #Determine new circulation
+            GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+        
+            #Calculate error
+            referror = max(abs(GammaNew))
+            referror = max(referror,0.001)
+            Error = max(abs(GammaNew-Gamma))
+            Error = Error/referror   
+            
+            #Update the circulation
+            Gamma = GammaNew
+            
+            if Error < Error_margin:
+                print('Error is ', np.round(float(Error),5))
+                break
+
+            Error_old = Error
+            print(i_iter)
+            i_iter += 1
+      
+        results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake)
+                
+        Fnorm = results[0][:Ncp]
+        Ftan = results[1][:Ncp]
+        alpha = results[2][:Ncp] 
+        inflow = results[3][:Ncp]
+        Vax = results[4][:Ncp]
+        Vtan = results[5][:Ncp]   
+        Gamma_blade = Gamma[:Ncp]
+        
+        #Calculate thrust and power coefficient
+        dr = (R_disL[1:]-R_disL[:-1])*V.R
+        CT_sens[i] = np.sum(dr*np.array(Fnorm).reshape((Ncp,))*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+        CP_sens[i] = np.sum(dr*np.array(Ftan).reshape((Ncp,))*np.array(controlpoints).reshape((Ncp,))*V.R*V.Nblades*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
+        Gamma_sens[i,:] = Gamma_blade.reshape((Ncp,))
+        Fnorm_sens[i,:] = Fnorm.reshape((Ncp,))
+        Ftan_sens[i,:] = Ftan.reshape((Ncp,))
+
+    #Plot results
+    fig_force_sens = plt.figure(figsize=(12,6))
+    plt.title('Force distributions for different wake lenghts')
+    ax_force_sens = plt.gca()
+    plt.plot(controlpoints,Fnorm_sens[0,:]/(0.5*V.U0**2*V.rho*V.R),'k'+lines[0], label=r'Fnorm, n_{r} = '+str(n_r_list[0]))
+    plt.plot(controlpoints,Ftan_sens[0,:]/(0.5*V.U0**2*V.rho*V.R),'g'+lines[0], label=r'Ftan, n_{r} = '+str(n_r_list[0]))
+    plt.legend()
+    plt.xlabel('r/R')
+    plt.grid()
+    plt.show()
+    
+    fig_gamma_sens = plt.figure(figsize=(12,6))
+    plt.title('Circulation distributions for different wake lenghts')
+    ax_gamma_sens = plt.gca()
+    plt.plot(controlpoints,Gamma_sens[0,:]/(np.pi*V.U0**2/(V.Nblades*Omega)),'k'+lines[0], label=r'Fnorm, n_{r} = '+str(n_r_list[0]))
+    plt.legend()
+    plt.xlabel('r/R')
+    plt.grid()
+    plt.show()
+    
+    fig_coef_sens = plt.figure(figsize=(12,6))
+    plt.title('Thrust and power coefficient error for different wake lenghts')
+    plt.plot(n_r_list[:-1],abs(CT_sens[:-1]-CT_sens[-1]),'k-o', label=r'$C_{t}$')
+    plt.plot(n_r_list[:-1],abs(CP_sens[:-1]-CP_sens[-1]),'r-o', label=r'$C_{p}$')
+    plt.grid()
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.legend()
+    plt.xlabel('# of wake rotations')
+    plt.show()               
+    for i in range(1,len(n_r_list)-1):
+        ax_force_sens.plot(controlpoints,Fnorm_sens[i,:]/(0.5*V.U0**2*V.rho*V.R),'k'+lines[i], label=r'Fnorm, n_{r} = '+str(n_r_list[i]))
+        ax_force_sens.plot(controlpoints,Ftan_sens[i,:]/(0.5*V.U0**2*V.rho*V.R),'g'+lines[i], label=r'Ftan, n_{r} = '+str(n_r_list[i]))
+        plt.legend()
+        plt.show()
+        
+        ax_gamma_sens.plot(controlpoints,Gamma_sens[i,:]/(np.pi*V.U0**2/(V.Nblades*Omega)),'k'+lines[i], label=r'\Gamma, n_{r} = '+str(n_r_list[i]))
+        plt.legend()   
+        plt.show()
+#-----------------------------------------------
+#--------(End) Sensitivity to wakelength--------
 #-----------------------------------------------
 t_end = time.time()
 print('Total elapsed time is ',t_end-t_start,' seconds')

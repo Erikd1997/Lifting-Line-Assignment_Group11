@@ -13,8 +13,13 @@ def loadBladeOverAllElements(rho, U_infty, u, v, w, Omega, controlpoints, twist,
     """
     #First determine velocities
     Vaxial = U_infty - u
+    
+    if double:
+        n_rotors = 2
+    else:
+        n_rotors = 1
     Blades = np.arange(len(BigMatrix[0,0,:,0]))
-    theta_0 = (Blades) * 2*np.pi/(len(Blades))
+    theta_0 = (Blades) * 2*np.pi/(len(Blades)/n_rotors)
     if double:
         theta_0_2 = theta_0 - phase_dif*np.pi/180
         theta_0 = np.hstack((theta_0, theta_0_2))

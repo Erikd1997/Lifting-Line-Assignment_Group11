@@ -19,9 +19,11 @@ def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma, double=False
     
     #In the case of double rotor configuration
     if double:
+        n_rotors = 2
         ref_matrix_phase = np.hstack((np.zeros((int(NBlades/2),)),np.ones((int(NBlades/2),))))
         ref_matrix_sep = np.hstack((np.ones((Ncp_Blade*int(NBlades/2),)),-1*np.ones((Ncp_Blade*int(NBlades/2),))))
     else:
+        n_rotors = 1
         ref_matrix_phase = np.zeros((NBlades,))
         ref_matrix_sep = np.zeros((Ncp))
     
@@ -39,7 +41,7 @@ def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma, double=False
     
     #Create theta0 (for blade distribution over 2pi radians)
     phase = ref_matrix_phase*phase_dif*np.pi/180
-    theta0 = np.ones([Ncp_Blade,1,1])*(0) * 2*np.pi/NBlades
+    theta0 = np.ones([Ncp_Blade,1,1])*(0) * 2*np.pi/(NBlades/n_rotors)
     
     for i in range(1,NBlades):
         X1_x = np.concatenate((X1_x, BigMatrix[:, :-1, i, 0].reshape([1,Ncp_Blade,Nwp-1])),axis=1)
@@ -50,7 +52,7 @@ def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma, double=False
         X2_y = np.concatenate((X2_y, BigMatrix[:, 1:, i, 1].reshape([1,Ncp_Blade,Nwp-1])),axis=1)    
         X2_z = np.concatenate((X2_z, BigMatrix[:, 1:, i, 2].reshape([1,Ncp_Blade,Nwp-1])),axis=1)    
         
-        theta0 = np.concatenate((theta0, np.ones([Ncp_Blade,1,1])*(i)*2*np.pi/NBlades-phase[i]),axis=0)
+        theta0 = np.concatenate((theta0, np.ones([Ncp_Blade,1,1])*(i)*2*np.pi/(NBlades/n_rotors)-phase[i]),axis=0)
         
     #Create Xp $Xp[controlpoint,jring,wakepoint]$
     y_offset = (ref_matrix_sep*d_sep/2).reshape([Ncp,1,1])
