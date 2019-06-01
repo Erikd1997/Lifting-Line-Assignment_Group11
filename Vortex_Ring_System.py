@@ -8,7 +8,7 @@ Created on Tue May 14 12:00:17 2019
 
 import numpy as np
 
-def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma):
+def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma, double=False, phase_dif=0, d_sep=0):
     NBlades = len(BigMatrix[0,0,:,0])
     Nwp = len(BigMatrix[0,:,0,0])
     Ncp_Blade = len(BigMatrix[:,0,0,0])
@@ -16,6 +16,14 @@ def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma):
     Umatrix = np.zeros((Ncp,Ncp))
     Vmatrix = np.zeros((Ncp,Ncp))
     Wmatrix = np.zeros((Ncp,Ncp))
+    
+    #In the case of double rotor configuration
+    if double:
+        ref_matrix_phase = np.hstack((np.zeros((int(NBlades/2),)),np.ones((int(NBlades/2),))))
+        ref_matrix_sep = np.hstack((np.ones((Ncp_Blade*int(NBlades/2),)),-1*np.ones((Ncp_Blade*int(NBlades/2),))))
+    else:
+        ref_matrix_phase = np.zeros((NBlades,))
+        ref_matrix_sep = np.zeros((Ncp))
     
     #Define Gamma in the case of Gamma = 1
     gamma = np.ones([1,Ncp,1])*gamma
@@ -30,7 +38,9 @@ def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma):
     X2_z = BigMatrix[:, 1:, 0, 2].reshape([1,Ncp_Blade,Nwp-1])
     
     #Create theta0 (for blade distribution over 2pi radians)
+    phase = ref_matrix_phase*phase_dif*np.pi/180
     theta0 = np.ones([Ncp_Blade,1,1])*(0) * 2*np.pi/NBlades
+    
     for i in range(1,NBlades):
         X1_x = np.concatenate((X1_x, BigMatrix[:, :-1, i, 0].reshape([1,Ncp_Blade,Nwp-1])),axis=1)
         X1_y = np.concatenate((X1_y, BigMatrix[:, :-1, i, 1].reshape([1,Ncp_Blade,Nwp-1])),axis=1)
@@ -40,11 +50,12 @@ def induced_velocity_vortex_system(BigMatrix, controlpoints, gamma):
         X2_y = np.concatenate((X2_y, BigMatrix[:, 1:, i, 1].reshape([1,Ncp_Blade,Nwp-1])),axis=1)    
         X2_z = np.concatenate((X2_z, BigMatrix[:, 1:, i, 2].reshape([1,Ncp_Blade,Nwp-1])),axis=1)    
         
-        theta0 = np.concatenate((theta0, np.ones([Ncp_Blade,1,1])*(i)*2*np.pi/NBlades),axis=0)
-
+        theta0 = np.concatenate((theta0, np.ones([Ncp_Blade,1,1])*(i)*2*np.pi/NBlades-phase[i]),axis=0)
+        
     #Create Xp $Xp[controlpoint,jring,wakepoint]$
+    y_offset = (ref_matrix_sep*d_sep/2).reshape([Ncp,1,1])
     Xp_x = np.zeros([Ncp,1,1])
-    Xp_y = -controlpoints.reshape([Ncp,1,1])*np.sin(theta0)
+    Xp_y = -controlpoints.reshape([Ncp,1,1])*np.sin(theta0) - y_offset
     Xp_z = controlpoints.reshape([Ncp,1,1])*np.cos(theta0)
     
     [Umatrix, Vmatrix, Wmatrix] = velocity_matrix_from_vortex_filament(X1_x, X1_y, X1_z, X2_x, X2_y, X2_z, Xp_x, Xp_y, Xp_z, gamma)

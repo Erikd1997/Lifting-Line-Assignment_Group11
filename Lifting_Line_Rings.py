@@ -4,11 +4,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
-def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=False):
+def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, double=False, S_sep=0, phase_dif=0, plot=False):
         
-    #Calculate intermediate parameters
+    #Calculate intermediate parameters (Rings[controlpoint, Wake_point, Blade_Number, coordinate])
+    if double:
+        n_rotors = 2
+        offset_y = S_sep/2
+    else:
+        n_rotors = 1
+        offset_y = 0
     L = 2*n_t+2
-    Rings = np.zeros([len(R)-1, L, NBlades, 3])
+    Rings = np.zeros([(len(R)-1), L, n_rotors*NBlades, 3])
     U_w = U_infty*(1-a_w)
     
     #Blade geometry distribution
@@ -23,7 +29,15 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
     Blades = np.arange(NBlades)
     Blades = Blades.reshape([1, 1, NBlades])
     theta_0 = (Blades) * 2*np.pi/NBlades
-    
+    if double:
+        theta_0_2 = theta_0 - phase_dif*np.pi/180
+        theta_0 = np.concatenate((theta_0, theta_0_2), axis=2)
+        
+        #Offset in y due to rotors being separated
+        offset_y = offset_y * np.concatenate((np.ones([1, 1, NBlades]),-1*np.ones([1, 1, NBlades])),axis=2)
+    else:
+        offset_y = offset_y * np.ones([1, 1, NBlades])
+        
     #Setup time array with extra zeros in middle
     t_end = n_r*2*np.pi/omega
     t_int = np.linspace(0,t_end,n_t)
@@ -42,11 +56,11 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
     offset_B = np.concatenate((offset_B, zero_offset),axis=1)
     
     xw_U = t*U_w + offset_U*np.sin(twist_U)
-    yw_U = -r_U*np.sin(omega*t+theta_0) - offset_U*np.cos(twist_U)*np.cos(theta_0)
+    yw_U = -r_U*np.sin(omega*t+theta_0) - offset_U*np.cos(twist_U)*np.cos(theta_0) - offset_y
     zw_U = r_U*np.cos(omega*t+theta_0) - offset_U*np.cos(twist_U)*np.sin(theta_0)
     
     xw_B = np.fliplr(t)*U_w + offset_B*np.sin(twist_B)
-    yw_B = -r_B*np.sin(omega*np.fliplr(t)+theta_0) - offset_B*np.cos(twist_B)*np.cos(theta_0)
+    yw_B = -r_B*np.sin(omega*np.fliplr(t)+theta_0) - offset_B*np.cos(twist_B)*np.cos(theta_0) -  offset_y
     zw_B = r_B*np.cos(omega*np.fliplr(t)+theta_0) - offset_B*np.cos(twist_B)*np.sin(theta_0)
     
     xw = np.concatenate((xw_B, xw_U), axis=1)
@@ -64,11 +78,10 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
     if plot:
         fig = plt.figure()
         ax = fig.gca(projection='3d')
-#        ax.plot(Rings[25,:,0,0], Rings[25,:,0,1], Rings[25,:,0,2], 'b-')
-        for Blade in range(2):
+        for Blade in range(NBlades*n_rotors):
             #x, y and z location of quarter chord
             Bladex_c_4 = np.zeros((len(R),))
-            Bladey_c_4 = -R*np.sin(theta_0[0,0,Blade])
+            Bladey_c_4 = -R*np.sin(theta_0[0,0,Blade]) - offset_y[0,0,Blade]
             Bladez_c_4 = R*np.cos(theta_0[0,0,Blade])
             
             #x, y and z location of the left part of the blade
@@ -86,14 +99,16 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, plot=F
             Bladey = np.hstack((Bladey_R, np.flip(Bladey_L), Bladey_R[0]))
             Bladez = np.hstack((Bladez_R, np.flip(Bladez_L), Bladez_R[0]))
             
-            ax.plot(Bladex_c_4,Bladey_c_4,Bladez_c_4, 'k--')
-            ax.plot(Bladex, Bladey, Bladez, 'k-')
             
             for Radial_Point in range(0,len(r_U),int(len(r_U)/2)-1):
                 ax.plot(Rings[Radial_Point,:,Blade,0], Rings[Radial_Point,:,Blade,1], Rings[Radial_Point,:,Blade,2], 'b-')
+            
+            ax.plot(Bladex_c_4,Bladey_c_4,Bladez_c_4, 'k--')
+            ax.plot(Bladex, Bladey, Bladez, 'k-')
         ax.set_xlim([xmin, xmax])   
-#        ax.set_ylim([-15,15])
-#        ax.set_zlim([-15,15])
+        if double:
+            zmax = (S_sep + 2*R[-1])/2
+            ax.set_zlim([-zmax,zmax])
         plt.show()
     return Rings
 

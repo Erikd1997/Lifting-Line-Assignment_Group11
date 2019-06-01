@@ -7,14 +7,18 @@ Created on Fri May 17 13:31:34 2019
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-def newGamma(rho, U_infty, u, v, w, Omega, controlpoints, BigMatrix, twist, polar_alpha, polar_cl, chord):
+def newGamma(rho, U_infty, u, v, w, Omega, controlpoints, BigMatrix, twist, polar_alpha, polar_cl, chord, double=False, phase_dif=0):
     """
     calculates the new circulation distribution along the blade
     """
     Vaxial = U_infty - u
     
     Blades = np.arange(len(BigMatrix[0,0,:,0]))
-    theta_0 = (Blades) * 2*np.pi/(Blades[-1]+1)
+    theta_0 = (Blades) * 2*np.pi/(len(Blades))
+    if double:
+        theta_0_2 = theta_0 - phase_dif*np.pi/180
+        theta_0 = np.hstack((theta_0, theta_0_2))
+    
     Vtan =  np.mat(np.zeros([len(controlpoints)*len(Blades), 1]))
     for i in range(len(controlpoints)):
         for j in range(len(Blades)):
