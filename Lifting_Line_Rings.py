@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 
-def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, double=False, S_sep=0, phase_dif=0, plot=False):
+def WakeGeometry(case, U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, double=False, S_sep=0, phase_dif=0, plot=False):
         
     #Calculate intermediate parameters (Rings[controlpoint, Wake_point, Blade_Number, coordinate])
     if double:
@@ -15,7 +15,11 @@ def WakeGeometry(U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, double
         offset_y = 0
     L = 2*n_t+2
     Rings = np.zeros([(len(R)-1), L, n_rotors*NBlades, 3])
-    U_w = U_infty*(1-a_w)
+    if case == 'turbine':
+        U_w = U_infty*(1-a_w)
+    else:
+        U_w = U_infty*(1+a_w)
+
     
     #Blade geometry distribution
     r_U = R[1:].reshape([len(R)-1, 1, 1])

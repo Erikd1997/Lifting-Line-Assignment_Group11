@@ -7,12 +7,15 @@ Created on Sun May 19 23:24:01 2019
 import numpy as np
 from scipy.interpolate import InterpolatedUnivariateSpline
 
-def loadBladeOverAllElements(rho, U_infty, u, v, w, Omega, controlpoints, twist, polar_alpha, polar_cl, polar_cd, chord, BigMatrix, double=False, phase_dif=0):
+def loadBladeOverAllElements(case, rho, U_infty, u, v, w, Omega, controlpoints, twist, polar_alpha, polar_cl, polar_cd, chord, BigMatrix, double=False, phase_dif=0):
     """
     calculates the loads on all blade elements in a single blade
     """
     #First determine velocities
-    Vaxial = U_infty - u
+    if case == 'turbine':
+        Vaxial = U_infty - u
+    else:
+        Vaxial = U_infty + u
     
     if double:
         n_rotors = 2
@@ -28,8 +31,11 @@ def loadBladeOverAllElements(rho, U_infty, u, v, w, Omega, controlpoints, twist,
     for i in range(len(controlpoints)):
         for j in range(len(Blades)):
             i_cp = j*len(controlpoints)+i
-            n_times_vt = +np.cos(theta_0[j])*v[i_cp] + np.sin(theta_0[j])*w[i_cp]
-            Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
+            n_times_vt = np.cos(theta_0[j])*v[i_cp] - np.sin(theta_0[j])*w[i_cp]
+            if case == 'turbine':
+                Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
+            else:
+                Vtan[i_cp] = Omega*controlpoints[i] - n_times_vt
     Vp = np.sqrt(np.multiply(Vaxial, Vaxial) + np.multiply(Vtan, Vtan))
     
     #Next determine force coefficients on the blade elements

@@ -29,10 +29,11 @@ t_start = time.time()
 #------(Start) Setup Block: Can be altered by user------
 #-------------------------------------------------------
 
+factor = 1
 #Blade discretisation parameters
-Ncp = 15
+Ncp = 25
 dis_mode = 'constant'
-reload = False
+reload = True
 order = 3
 
 #Vortex wake parameters
@@ -40,22 +41,23 @@ n_r = 20
 n_pr = 40
 n_r_list = [1,5,10,20,50,100]
 lines = ['-x','-o','-s','-d','-^']
-a_w_init = 0.1
+a_w_init = 0.03
 case = 'turbine'           #Choice between 'turbine' and 'propeller'
 
 #Iteration parameters
 n_iterations = 20
-Error_margin = 0.0001
+Error_margin = 0.001
 
 #Program modes
-Sensitivity = True        #Only runs if Double_rotor and BEM_compare == False
-BEM_compare = False       #Always false if Double_rotor = True
-Plot = False
+Sensitivity = False        #Only runs if Double_rotor and BEM_compare == False
+BEM_compare = True       #Always false if Double_rotor = True
+Plot = True
 show_results_BEM = False
+plot_Wake = False
 
 #Model setup for double rotor configuration
 Double_rotor = False         #Set to True for double rotor configuration
-L_sep = 1          #Separation distance between two rotors expressed 
+L_sep = 1                   #Separation distance between two rotors expressed 
                             #in rotor diameter
 phase_dif = 0              #Phase difference in degrees                            
 
@@ -76,14 +78,14 @@ if case == 'turbine':
     airfoil = 'polar_DU95W180.xlsx'
     sheet   = "Blade1"
 elif case == 'propeller':
-    Omega = V.rpm/60*2*np.pi
     import Geometry_propeller as V
+    Omega = V.rpm/60*2*np.pi
     airfoil = 'ARA_airfoil_data.xlsx'
     sheet   = "Sheet1"
 
 #Pre-calculations in case of double rotor configuration
 if Double_rotor:
-    #BEM_compare = False
+    BEM_compare = False
     L_sep = L_sep*(V.R*2)
     n_rotors = 2
 else:
@@ -140,7 +142,7 @@ controlpoints_all = controlpoints
 Twist_all_cp = Twist_cp
 chord_all_cp = Chord_cp
 for i in range(1,V.Nblades*n_rotors):
-    controlpoints_all     = np.vstack((controlpoints_all, controlpoints))
+    controlpoints_all = np.vstack((controlpoints_all, controlpoints))
     Twist_all_cp = np.vstack((Twist_all_cp,Twist_cp))
     chord_all_cp = np.vstack((chord_all_cp,Chord_cp))
 
@@ -173,19 +175,24 @@ if not Sensitivity:
     #Setup initial vortex wake structure
     t_VW_0 = time.time()
     if Double_rotor:
-        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
+        Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
     else:
-        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
+        Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, plot=plot_Wake)
     
     
     t_VW_end = time.time()
     print('Vortex wake geometry is determined in ', t_VW_end-t_VW_0,' seconds')
     
     #Setup Biot-Savart induction matrix for Gamma = 1
-    if Double_rotor:
-        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1, double=True, phase_dif=phase_dif, d_sep=L_sep)
+    if case == 'propeller':
+        Gamma_1 = 1
     else:
-        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+        Gamma_1 = 1
+        
+    if Double_rotor:
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1, double=True, phase_dif=phase_dif, d_sep=L_sep)
+    else:
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1)
     t_ind_end = time.time()
     print('Induced velocity matrices are calculated in ',t_ind_end-t_VW_end,' seconds')
     
@@ -195,9 +202,9 @@ if not Sensitivity:
     Vind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
     Wind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
     if Double_rotor:
-        Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
+        Gamma = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
     else:
-        Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+        Gamma = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
     t_Gamma_end = time.time()
     print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
     
@@ -208,35 +215,35 @@ if not Sensitivity:
 #-----------------------------------------------
 #---(Start) Main block 2: Iterate circulation---
 #-----------------------------------------------
-    
+    Vortex_Wake_prev = Vortex_Wake
     #Calculate induced velocity
-    i_iter = 1
+    i_iter = 0
     Error_old = 1
     while i_iter < n_iterations:
-        Uind = Ind_Vel_Mat_u*Gamma
-        Vind = Ind_Vel_Mat_v*Gamma
-        Wind = Ind_Vel_Mat_w*Gamma
+        Uind = factor*Ind_Vel_Mat_u*Gamma
+        Vind = factor*Ind_Vel_Mat_v*Gamma
+        Wind = factor*Ind_Vel_Mat_w*Gamma
         
         #Update vortex rings with new a_w
-        if Double_rotor:
+        if Double_rotor and case == 'turbine':
             a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
             a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
-            Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
+            Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
         else:
             a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
             a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
-            Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
+            Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
         
         if Double_rotor:
-            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1, double=True, phase_dif=phase_dif, d_sep=L_sep)
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1, double=True, phase_dif=phase_dif, d_sep=L_sep)
         else:
-            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1)
             
         #Determine new circulation
         if Double_rotor:
-            GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
+            GammaNew = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp, double=True, phase_dif=phase_dif)
         else:
-            GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+            GammaNew = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
     
         #Calculate error
         referror = max(abs(GammaNew))
@@ -271,9 +278,9 @@ if not Sensitivity:
     
     #One simple function to obtain [fnorm, ftan, AoA, AngleInflow]
     if Double_rotor:
-        results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake, double=True, phase_dif=phase_dif)
+        results = LBE(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake, double=True, phase_dif=phase_dif)
     else:
-        results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake)
+        results = LBE(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake)
     
 #-----------------------------------------------
 #------(End) Main block 3: Calculate Loads------
@@ -400,7 +407,7 @@ else:
         n_t = n_t_lst[i]
         #Setup initial vortex wake structure
         t_VW_0 = time.time()
-        Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
+        Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
         t_VW_end = time.time()
         print('Vortex wake geometry is determined in ', t_VW_end-t_VW_0,' seconds')
         
@@ -414,12 +421,12 @@ else:
         Uind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
         Vind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
         Wind = np.mat(np.zeros((Ncp*V.Nblades*n_rotors,1)))
-        Gamma = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+        Gamma = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
         t_Gamma_end = time.time()
         print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
     
         #Calculate induced velocity
-        i_iter = 1
+        i_iter = 0
         Error_old = 1
         while i_iter < n_iterations:
             Uind = Ind_Vel_Mat_u*Gamma
@@ -429,12 +436,12 @@ else:
             #Update vortex rings with new a_w
             a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
             a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
-            Vortex_Wake = WG(V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
+            Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
             
             [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
                 
             #Determine new circulation
-            GammaNew = GF(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
+            GammaNew = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
         
             #Calculate error
             referror = max(abs(GammaNew))
@@ -453,7 +460,7 @@ else:
             print(i_iter)
             i_iter += 1
       
-        results = LBE(V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake)
+        results = LBE(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Twist_all_cp, polar_alpha, polar_cl, polar_cd, chord_all_cp, Vortex_Wake)
                 
         Fnorm = results[0][:Ncp]
         Ftan = results[1][:Ncp]

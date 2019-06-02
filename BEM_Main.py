@@ -76,11 +76,10 @@ def BEM_Model(N_ann_reg, Dis_method, case, Optimise=False, show_results = False)
         s_twist = InterpolatedUnivariateSpline(R_cp, twist_cp, k=order)
         twist_distribution = np.array(s_twist(r_R)).reshape((N_ann_reg+1,)) 
         
-    data1=pd.read_excel( airfoil, sheet)#airfoil, header=0,
-                        #names = ["Alfa", "Cl", "Cd", "Cm"], sep='\s+')
-    polar_alpha = data1['Alfa']#[:]
-    polar_cl = data1['Cl']#[:]
-    polar_cd = data1['Cd']#[:]
+    data1=pd.read_excel(airfoil, sheet)
+    polar_alpha = data1['Alfa']
+    polar_cl = data1['Cl']
+    polar_cd = data1['Cd']
     
     if Optimise:
         results = np.zeros((N_ann_reg,9))
@@ -91,22 +90,27 @@ def BEM_Model(N_ann_reg, Dis_method, case, Optimise=False, show_results = False)
         r1_R = r_R[annulus]                                           #***CHANGE***
         r2_R = r_R[annulus+1]                                         #***CHANGE***
         r_R_centroid[annulus] = (r1_R + r2_R)/2                       #***CHANGE***    
-        if Optimise:
+        if Optimise and case == 'turbine':
             Area = np.pi*((r2_R*V.R)**2-(r1_R*V.R)**2) #  area streamtube
             fnorm_opti = V.CT_opt*0.5*V.rho*V.U0**2*Area/V.Nblades/V.R/(r2_R-r1_R)
             results[annulus,:] = Opt(case, fnorm_opti, V.U0, r1_R, r2_R, V.R, V.rootradius_R, V.tipradius_R, Omega, V.Nblades, V.rho, polar_alpha, polar_cl, polar_cd, V.TSR)
+        elif Optimise and case == 'propeller':
+            results[annulus,2] = (r1_R+r2_R)/2
+            results[annulus,7] = -50*(r1_R+r2_R)/2+V.Pblade
+            results[annulus,8] = 0.18-0.06*(r1_R+r2_R)/2
         else:
             chord = np.interp((r_R[annulus]+r_R[annulus+1])/2, r_R, chord_distribution)
             twist = np.interp((r_R[annulus]+r_R[annulus+1])/2, r_R, twist_distribution)
             results[annulus,:] = SS(case, V.rho, V.U0, r1_R, r2_R, V.rootradius_R, V.tipradius_R, Omega, V.R, V.Nblades, chord, twist, polar_alpha, polar_cl, polar_cd, V.TSR)
         
     #Plot results
-    dr = (r_R[1:]-r_R[:-1])*V.R
-    CT = np.sum(dr*results[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
-    CP = np.sum(dr*results[:,4]*results[:,2]*V.Nblades*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
+    if not Optimise or case == 'turbine':
+        dr = (r_R[1:]-r_R[:-1])*V.R
+        CT = np.sum(dr*results[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+        CP = np.sum(dr*results[:,4]*results[:,2]*V.Nblades*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
 
     if plot:
-        if Optimise:
+        if Optimise and case == 'turbine':
             print('Optimal CT is ', CT)
             print('Optimal CP is ', CP)
             
@@ -156,7 +160,7 @@ def BEM_Model(N_ann_reg, Dis_method, case, Optimise=False, show_results = False)
             plt.legend()
             plt.show()
             
-        else:        
+        elif not Optimise:        
             #Axial and tangential induction factor over radius
             fig_a = plt.figure(figsize=(12,6))
             plt.title('Axial and tangential induction factor')
