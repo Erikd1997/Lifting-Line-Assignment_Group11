@@ -9,7 +9,7 @@ alt = 2000  # ISA altitude in meters
 rho = 1.007 # density in kg/m^3
 rootradius_R = 0.25  # blade starts at this, before that hub
 tipradius_R = 1 # blade ends at this, end of the tip
-Pblade = +81 # blade pitch in degrees (46 @ r/R=0.7)
+Pblade = -31 # blade pitch in degrees (46 @ r/R=0.7)
 Iangle = 0  # incidence angle in degrees
 U0 = 60  # in m/s
 rpm = 1200 # rev/min

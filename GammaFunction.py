@@ -29,25 +29,19 @@ def newGamma(case, rho, U_infty, u, v, w, Omega, controlpoints, BigMatrix, twist
     for i in range(len(controlpoints)):
         for j in range(len(Blades)):
             i_cp = j*len(controlpoints)+i
-            n_times_vt = +np.cos(theta_0[j])*v[i_cp] - np.sin(theta_0[j])*w[i_cp]
+            n_times_vt = +np.cos(theta_0[j])*v[i_cp] + np.sin(theta_0[j])*w[i_cp]
             if case == 'turbine':
                 Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
             else:
                 Vtan[i_cp] = Omega*controlpoints[i] - n_times_vt
     Vp = np.sqrt(np.multiply(Vaxial, Vaxial) + np.multiply(Vtan, Vtan))
-    inflowangle = np.arctan2(Vaxial,Vtan)
+    inflowangle = np.arctan2(Vaxial, Vtan)
     if case == 'turbine':
         alpha = inflowangle*180/np.pi + twist
     else:
-        alpha = inflowangle*180/np.pi - twist
+        alpha = inflowangle*180/np.pi + twist
     s_cl = InterpolatedUnivariateSpline(polar_alpha, polar_cl, k=1)
     cl = s_cl(alpha)
-#    cl = np.interp(alpha, polar_alpha, polar_cl)
     gamma = 0.5*np.multiply(np.multiply(Vp,cl),chord)
-#    for i in Blades:
-#        gamma[i*len(controlpoints)] = 0
-#        gamma[i*len(controlpoints)+1] = gamma[i*len(controlpoints)+2]
-#        gamma[i*len(controlpoints)+18] = gamma[i*len(controlpoints)+17]
-#        gamma[i*len(controlpoints)+len(BigMatrix[:,0,0,0])-1] = 0
         
     return gamma

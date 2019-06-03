@@ -1,15 +1,4 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
-
 import numpy as np
-
-
-# In[3]:
-
 
 def CTfunction(a, glauert = False):
     """
@@ -24,12 +13,6 @@ def CTfunction(a, glauert = False):
         CT[a>=a1] = CT1-4*(np.sqrt(CT1)-1)*(1-a[a>=a1])
     return CT
     
-    
-
-
-# In[4]:
-
-
 def ainduction(CT, glauert):
     """
     This function calculates the induction factor 'a' as a function of thrust coefficient CT 
@@ -44,31 +27,6 @@ def ainduction(CT, glauert):
     elif not glauert:
         a = 0.5-0.5*np.sqrt(1-CT)
     return a
-
-
-# In[8]:
-
-
-# plot CT as a function of induction "a", with and without Glauert correction
-# define a as a range
-#a = np.arange(-.5,1,.01)
-#CTmom = CTfunction(a) # CT without correction
-#CTglauert = CTfunction(a, True) # CT with Glauert's correction
-#a2 = ainduction(CTglauert)
-#
-#fig1 = plt.figure(figsize=(12, 6))
-#plt.plot(a, CTmom, 'k-', label='$C_T$')
-#plt.plot(a, CTglauert, 'b--', label='$C_T$ Glauert')
-#plt.plot(a, CTglauert*(1-a), 'g--', label='$C_P$ Glauert')
-#plt.xlabel('a')
-#plt.ylabel(r'$C_T$ and $C_P$')
-#plt.grid()
-#plt.legend()
-#plt.show()
-
-
-# In[ ]:
-
 
 def PrandtlTipRootCorrection(flowtype, r_R, rootradius_R, tipradius_R, TSR, NBlades, axial_induction):
     """
@@ -90,58 +48,6 @@ def PrandtlTipRootCorrection(flowtype, r_R, rootradius_R, tipradius_R, TSR, NBla
     Froot[np.isnan(Froot)] = 0
     return Froot*Ftip, Ftip, Froot
 
-
-# In[10]:
-
-
-# plot Prandtl tip, root and combined correction for a number of blades and induction 'a', over the non-dimensioned radius
-#r_R = np.arange(0.1, 1, .01)
-#a = np.zeros(np.shape(r_R))+0.3
-#Prandtl, Prandtltip, Prandtlroot = PrandtlTipRootCorrection(r_R, 0.1, 1, 7, 3, a)
-#
-#fig1 = plt.figure(figsize=(12, 6))
-#plt.plot(r_R, Prandtl, 'r-', label='Prandtl')
-#plt.plot(r_R, Prandtltip, 'g.', label='Prandtl tip')
-#plt.plot(r_R, Prandtlroot, 'b.', label='Prandtl root')
-#plt.xlabel('r/R')
-#plt.legend()
-#plt.show()
-
-
-# In[11]:
-
-
-# import polar
-
-#import pandas as pd
-#
-#airfoil = 'DU95W180.csv'
-#data1=pd.read_csv(airfoil, header=0,
-#                    names = ["alfa", "cl", "cd", "cm"],  sep='\s+')
-#polar_alpha = data1['alfa'][:]
-#polar_cl = data1['cl'][:]
-#polar_cd = data1['cd'][:]
-
-
-# In[12]:
-
-
-# plot polars of the airfoil C-alfa and Cl-Cd
-
-#fig, axs = plt.subplots(1, 2, figsize=(12, 6))
-#axs[0].plot(polar_alpha, polar_cl)
-#axs[0].set_xlim([-30,30])
-#axs[0].set_xlabel(r'$\alpha$')
-#axs[0].set_ylabel(r'$C_l$')
-#axs[0].grid()
-#axs[1].plot(polar_cd, polar_cl)
-#axs[1].set_xlim([0,.1])
-#axs[1].set_xlabel(r'$C_d$')
-#axs[1].grid()
-#plt.show()
-
-
-    # In[13]:
 def OptimalAlpha(polar_alpha, polar_cl, polar_cd):
     alpha_range = np.arange(-10,25,0.1)
     L_D = np.zeros((len(alpha_range),1))
@@ -303,44 +209,5 @@ def Optimise(flowtype, fnormi, Uinf, r1_R, r2_R, Radius, rootradius_R, tipradius
     fnorm = lift*np.cos(inflowangle)+drag*np.sin(inflowangle)
     ftan = lift*np.sin(inflowangle)-drag*np.cos(inflowangle)
     gamma = 0.5*np.sqrt(vmag2)*cl*chord
-#    if abs(fnormi - fnorm) < 10**-2:
-#        print('They are the same')
     return [a, aline, r_R, fnorm, ftan, alpha, inflowangle, twist, chord]
-
-# In[ ]:
-
-
-## define the blade geometry
-#delta_r_R = .01
-#r_R = np.arange(0.2, 1+delta_r_R/2, delta_r_R)
-#
-#
-## blade shape
-#pitch = 2 # degrees
-#chord_distribution = 3*(1-r_R)+1 # meters
-#twist_distribution = -14*(1-r_R)+pitch # degrees
-#
-#
-#
-## define flow conditions
-#Uinf = 1 # unperturbed wind speed in m/s
-#TSR = 8 # tip speed ratio
-#Radius = 50
-#Omega = Uinf*TSR/Radius
-#NBlades = 3
-#
-#TipLocation_R =  1
-#RootLocation_R =  0.2
-#
-#
-## solve BEM model
-#
-#
-#results =np.zeros([len(r_R)-1,6]) 
-#
-#for i in range(len(r_R)-1):
-#    chord = np.interp((r_R[i]+r_R[i+1])/2, r_R, chord_distribution)
-#    twist = np.interp((r_R[i]+r_R[i+1])/2, r_R, twist_distribution)
-#    
-#    results[i,:] = solveStreamtube(Uinf, r_R[i], r_R[i+1], RootLocation_R, TipLocation_R , Omega, Radius, NBlades, chord, twist, polar_alpha, polar_cl, polar_cd )
 

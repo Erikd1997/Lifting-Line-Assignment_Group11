@@ -96,7 +96,7 @@ def BEM_Model(N_ann_reg, Dis_method, case, Optimise=False, show_results = False)
             results[annulus,:] = Opt(case, fnorm_opti, V.U0, r1_R, r2_R, V.R, V.rootradius_R, V.tipradius_R, Omega, V.Nblades, V.rho, polar_alpha, polar_cl, polar_cd, V.TSR)
         elif Optimise and case == 'propeller':
             results[annulus,2] = (r1_R+r2_R)/2
-            results[annulus,7] = -50*(r1_R+r2_R)/2+V.Pblade
+            results[annulus,7] = 50*(r1_R+r2_R)/2+V.Pblade
             results[annulus,8] = 0.18-0.06*(r1_R+r2_R)/2
         else:
             chord = np.interp((r_R[annulus]+r_R[annulus+1])/2, r_R, chord_distribution)

@@ -30,22 +30,23 @@ t_start = time.time()
 #-------------------------------------------------------
 
 factor = 1
+delta = 0.025
 #Blade discretisation parameters
-Ncp = 25
+Ncp = 20
 dis_mode = 'constant'
 reload = True
 order = 3
 
 #Vortex wake parameters
-n_r = 20
+n_r = 15
 n_pr = 40
-n_r_list = [1,5,10,20,50,100]
-lines = ['-x','-o','-s','-d','-^']
-a_w_init = 0.03
+n_r_list = [1,2,3,4,5,10,25,50,100]
+lines = ['-x','-o','-s','-d','-^','--x','--o','--s','--d','--^']
+a_w_init = 0.3
 case = 'turbine'           #Choice between 'turbine' and 'propeller'
 
 #Iteration parameters
-n_iterations = 20
+n_iterations = 10
 Error_margin = 0.001
 
 #Program modes
@@ -57,7 +58,7 @@ plot_Wake = False
 
 #Model setup for double rotor configuration
 Double_rotor = False         #Set to True for double rotor configuration
-L_sep = 1                   #Separation distance between two rotors expressed 
+L_sep = 1.5                   #Separation distance between two rotors expressed 
                             #in rotor diameter
 phase_dif = 0              #Phase difference in degrees                            
 
@@ -175,7 +176,7 @@ if not Sensitivity:
     #Setup initial vortex wake structure
     t_VW_0 = time.time()
     if Double_rotor:
-        Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
+        Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif, plot=plot_Wake)
     else:
         Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w_init, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, plot=plot_Wake)
     
@@ -190,9 +191,9 @@ if not Sensitivity:
         Gamma_1 = 1
         
     if Double_rotor:
-        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1, double=True, phase_dif=phase_dif, d_sep=L_sep)
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(delta, Vortex_Wake, controlpoints_all*V.R, Gamma_1, double=True, phase_dif=phase_dif, d_sep=L_sep)
     else:
-        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1)
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(delta, Vortex_Wake, controlpoints_all*V.R, Gamma_1)
     t_ind_end = time.time()
     print('Induced velocity matrices are calculated in ',t_ind_end-t_VW_end,' seconds')
     
@@ -235,9 +236,9 @@ if not Sensitivity:
             Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
         
         if Double_rotor:
-            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1, double=True, phase_dif=phase_dif, d_sep=L_sep)
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(delta, Vortex_Wake, controlpoints_all*V.R, Gamma_1, double=True, phase_dif=phase_dif, d_sep=L_sep)
         else:
-            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, Gamma_1)
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(delta, Vortex_Wake, controlpoints_all*V.R, Gamma_1)
             
         #Determine new circulation
         if Double_rotor:
@@ -319,14 +320,17 @@ if not Sensitivity:
     
         if Plot:
             #Axial induction factor versus radius  
-            a_i = 1 - Vax/V.U0
-            aline = Vtan.reshape((Ncp,1))/(Omega*controlpoints*V.R) - 1
-            
+            if case == 'turbine':
+                a_i = 1 - Vax/V.U0
+                aline = Vtan.reshape((Ncp,1))/(Omega*controlpoints*V.R) - 1
+            else:
+                a_i = Vax/V.U0 - 1
+                aline = 1 - Vtan.reshape((Ncp,1))/(Omega*controlpoints*V.R)            
             fig_a = plt.figure(figsize=(12,6))
             ax_a = plt.gca()
             plt.title('Axial induction factor')
-            plt.plot(controlpoints, a_i, 'r-x', label=r'$a$ - LL')
-            plt.plot(controlpoints, aline, 'g--x', label=r'$a^,$')
+            plt.plot(controlpoints, a_i, 'k-x', label=r'$a$ - LL')
+            plt.plot(controlpoints, aline, 'k--x', label=r'$a^,$')
             plt.grid()
             plt.xlabel('r/R')
             plt.legend()
@@ -336,8 +340,8 @@ if not Sensitivity:
             fig_force = plt.figure(figsize=(12,6))
             ax_force = plt.gca()
             plt.title(r'Normal and tangential force, non-dimensionalised by $\frac{1}{2} \rho U_\infty^2 R$')
-            plt.plot(controlpoints, Fnorm/(0.5*V.U0**2*V.rho*V.R), 'r-x', label=r'Fnorm - LL')
-            plt.plot(controlpoints, Ftan/(0.5*V.U0**2*V.rho*V.R), 'g--x', label=r'Ftan - LL')
+            plt.plot(controlpoints, Fnorm/(0.5*V.U0**2*V.rho*V.R), 'k-x', label=r'Fnorm - LL')
+            plt.plot(controlpoints, Ftan/(0.5*V.U0**2*V.rho*V.R), 'k--x', label=r'Ftan - LL')
             plt.grid()
             plt.xlabel('r/R')
             plt.legend()
@@ -347,7 +351,7 @@ if not Sensitivity:
             fig_circ = plt.figure(figsize=(12,6))
             ax_circ = plt.gca()
             plt.title(r'Circulation distribution, non-dimensionalised by $\frac{\pi U_\infty^2}{\Omega * NBlades}$')
-            plt.plot(controlpoints, Gamma_blade/(np.pi*V.U0**2/(V.Nblades*Omega)), 'r-x', label=r'$\Gamma$ - LL')
+            plt.plot(controlpoints, Gamma_blade/(np.pi*V.U0**2/(V.Nblades*Omega)), 'k-x', label=r'$\Gamma$ - LL')
             plt.grid()
             plt.xlabel('r/R')
             plt.legend()
@@ -357,7 +361,7 @@ if not Sensitivity:
             fig_inflow = plt.figure(figsize=(12,6))
             ax_inflow = plt.gca()
             plt.title('Angle distribution')
-            plt.plot(controlpoints, inflow*180/np.pi, 'r-x', label='Inflowangle - LL')
+            plt.plot(controlpoints, inflow*180/np.pi, 'k--x', label='Inflowangle - LL')
             plt.plot(controlpoints, Twist_cp, 'g-s', label='Twist - LL')
             plt.plot(controlpoints, alpha, 'k-x', label=r'$\alpha$ - LL')
             plt.grid()
@@ -373,19 +377,19 @@ if not Sensitivity:
             print('BEM CT = ', np.round(CT_BEM,4))
             print('BEM CP = ', np.round(CP_BEM,4))
             if Plot:
-                ax_a.plot(controlpoints, results_BEM[:,0], 'k-o', label=r'$a$ - BEM')
-                ax_a.plot(controlpoints, results_BEM[:,1], 'k--o', label=r'$a^,$ - BEM')
+                ax_a.plot(controlpoints, results_BEM[:,0], 'r-o', label=r'$a$ - BEM')
+                ax_a.plot(controlpoints, results_BEM[:,1], 'r--o', label=r'$a^,$ - BEM')
                 ax_a.legend()
             
-                ax_force.plot(controlpoints, results_BEM[:,3]/(0.5*V.U0**2*V.rho*V.R), 'k-o', label=r'Fnorm - BEM')
-                ax_force.plot(controlpoints, results_BEM[:,4]/(0.5*V.U0**2*V.rho*V.R), 'k--o', label=r'Ftan - BEM')
+                ax_force.plot(controlpoints, results_BEM[:,3]/(0.5*V.U0**2*V.rho*V.R), 'r-o', label=r'Fnorm - BEM')
+                ax_force.plot(controlpoints, results_BEM[:,4]/(0.5*V.U0**2*V.rho*V.R), 'r--o', label=r'Ftan - BEM')
                 ax_force.legend()    
                 
-                ax_circ.plot(controlpoints, results_BEM[:,5]/(np.pi*V.U0**2/(V.Nblades*Omega)), 'k--o', label=r'$\Gamma$ - BEM')
+                ax_circ.plot(controlpoints, results_BEM[:,5]/(np.pi*V.U0**2/(V.Nblades*Omega)), 'r--o', label=r'$\Gamma$ - BEM')
                 ax_circ.legend()
                 
                 ax_inflow.plot(controlpoints, results_BEM[:,7]*180/np.pi, 'r--o', label='Inflowangle - BEM')
-                ax_inflow.plot(controlpoints, results_BEM[:,6], 'k--o', label=r'$\alpha$ - BEM')
+                ax_inflow.plot(controlpoints, results_BEM[:,6], 'r-o', label=r'$\alpha$ - BEM')
                 ax_inflow.legend()
     else:
         dr = np.array(V.Nblades*list((R_disL[1:]-R_disL[:-1])*V.R))
@@ -412,7 +416,7 @@ else:
         print('Vortex wake geometry is determined in ', t_VW_end-t_VW_0,' seconds')
         
         #Setup Biot-Savart induction matrix for Gamma = 1
-        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+        [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(delta, Vortex_Wake, controlpoints_all*V.R, 1)
         t_ind_end = time.time()
         print('Induced velocity matrices are calculated in ',t_ind_end-t_VW_end,' seconds')
         
@@ -438,7 +442,7 @@ else:
             a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
             Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL)
             
-            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(Vortex_Wake, controlpoints_all*V.R, 1)
+            [Ind_Vel_Mat_u, Ind_Vel_Mat_v, Ind_Vel_Mat_w] = IV(delta, Vortex_Wake, controlpoints_all*V.R, 1)
                 
             #Determine new circulation
             GammaNew = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
@@ -467,7 +471,7 @@ else:
         alpha = results[2][:Ncp] 
         inflow = results[3][:Ncp]
         Vax = results[4][:Ncp]
-        Vtan = results[5][:Ncp]   
+        Vtan = results[5][:Ncp]  
         Gamma_blade = Gamma[:Ncp]
         
         #Calculate thrust and power coefficient
@@ -511,12 +515,10 @@ else:
     for i in range(1,len(n_r_list)-1):
         ax_force_sens.plot(controlpoints,Fnorm_sens[i,:]/(0.5*V.U0**2*V.rho*V.R),'k'+lines[i], label=r'Fnorm, n_{r} = '+str(n_r_list[i]))
         ax_force_sens.plot(controlpoints,Ftan_sens[i,:]/(0.5*V.U0**2*V.rho*V.R),'g'+lines[i], label=r'Ftan, n_{r} = '+str(n_r_list[i]))
-        plt.legend()
-        plt.show()
+        ax_force_sens.legend()
         
         ax_gamma_sens.plot(controlpoints,Gamma_sens[i,:]/(np.pi*V.U0**2/(V.Nblades*Omega)),'k'+lines[i], label=r'\Gamma, n_{r} = '+str(n_r_list[i]))
-        plt.legend()   
-        plt.show()
+        ax_gamma_sens.legend()   
 #-----------------------------------------------
 #--------(End) Sensitivity to wakelength--------
 #-----------------------------------------------

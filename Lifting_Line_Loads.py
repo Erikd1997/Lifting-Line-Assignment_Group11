@@ -31,7 +31,7 @@ def loadBladeOverAllElements(case, rho, U_infty, u, v, w, Omega, controlpoints, 
     for i in range(len(controlpoints)):
         for j in range(len(Blades)):
             i_cp = j*len(controlpoints)+i
-            n_times_vt = np.cos(theta_0[j])*v[i_cp] - np.sin(theta_0[j])*w[i_cp]
+            n_times_vt = +np.cos(theta_0[j])*v[i_cp] + np.sin(theta_0[j])*w[i_cp]
             if case == 'turbine':
                 Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
             else:
