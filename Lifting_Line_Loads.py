@@ -15,7 +15,7 @@ def loadBladeOverAllElements(case, rho, U_infty, u, v, w, Omega, controlpoints, 
     if case == 'turbine':
         Vaxial = U_infty - u
     else:
-        Vaxial = U_infty + u
+        Vaxial = U_infty - u
     
     if double:
         n_rotors = 2
@@ -35,7 +35,7 @@ def loadBladeOverAllElements(case, rho, U_infty, u, v, w, Omega, controlpoints, 
             if case == 'turbine':
                 Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
             else:
-                Vtan[i_cp] = Omega*controlpoints[i] - n_times_vt
+                Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
     Vp = np.sqrt(np.multiply(Vaxial, Vaxial) + np.multiply(Vtan, Vtan))
     
     #Next determine force coefficients on the blade elements

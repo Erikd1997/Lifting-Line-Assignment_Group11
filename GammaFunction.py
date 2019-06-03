@@ -14,7 +14,7 @@ def newGamma(case, rho, U_infty, u, v, w, Omega, controlpoints, BigMatrix, twist
     if case == 'turbine':
         Vaxial = U_infty - u
     else:
-        Vaxial = U_infty + u
+        Vaxial = U_infty - u
     if double:
         n_rotors = 2
     else:
@@ -33,13 +33,10 @@ def newGamma(case, rho, U_infty, u, v, w, Omega, controlpoints, BigMatrix, twist
             if case == 'turbine':
                 Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
             else:
-                Vtan[i_cp] = Omega*controlpoints[i] - n_times_vt
+                Vtan[i_cp] = Omega*controlpoints[i] + n_times_vt
     Vp = np.sqrt(np.multiply(Vaxial, Vaxial) + np.multiply(Vtan, Vtan))
     inflowangle = np.arctan2(Vaxial, Vtan)
-    if case == 'turbine':
-        alpha = inflowangle*180/np.pi + twist
-    else:
-        alpha = inflowangle*180/np.pi + twist
+    alpha = inflowangle*180/np.pi + twist
     s_cl = InterpolatedUnivariateSpline(polar_alpha, polar_cl, k=1)
     cl = s_cl(alpha)
     gamma = 0.5*np.multiply(np.multiply(Vp,cl),chord)

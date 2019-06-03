@@ -160,7 +160,12 @@ def BEM_Model(N_ann_reg, Dis_method, case, Optimise=False, show_results = False)
             plt.legend()
             plt.show()
             
-        elif not Optimise:        
+        elif not Optimise: 
+            CT = np.sum(dr*results[:,3]*V.Nblades/(0.5*V.U0**2*V.rho*np.pi*V.R**2))
+            CP = np.sum(dr*results[:,4]*results[:,2]*V.Nblades*V.R*Omega/(0.5*V.U0**3*V.rho*np.pi*V.R**2))
+            print('CT is ', CT)
+            print('CP is ', CP)
+            
             #Axial and tangential induction factor over radius
             fig_a = plt.figure(figsize=(12,6))
             plt.title('Axial and tangential induction factor')
@@ -215,3 +220,4 @@ def BEM_Model(N_ann_reg, Dis_method, case, Optimise=False, show_results = False)
             np.savetxt(file_path, SaveMat, fmt='%f', header=Head)            
     
     return results
+#BEM_Model(20, 'constant', 'propeller', show_results=True)

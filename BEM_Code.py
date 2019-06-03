@@ -36,14 +36,14 @@ def PrandtlTipRootCorrection(flowtype, r_R, rootradius_R, tipradius_R, TSR, NBla
     if flowtype == 'turbine':
         a = (1-axial_induction)
     elif flowtype == 'propeller':
-        a = (1+axial_induction)
+        a = (1-axial_induction)
         
-    temp1 = -NBlades/2*(tipradius_R-r_R)/r_R*np.sqrt(1+((TSR*r_R)**2)/(a**2)) #***CHANGE***
+    temp1 = -NBlades/2*(tipradius_R-r_R)/r_R*np.sqrt(1+((TSR*r_R)**2)/(a**2))
     Ftip = np.array(2/np.pi*np.arccos(np.exp(temp1)))
     Ftip[np.isnan(Ftip)] = 0
     
     #print("Ftip",Ftip)
-    temp1 = NBlades/2*(rootradius_R-r_R)/r_R*np.sqrt(1+((TSR*r_R)**2)/(a**2)) #***CHANGE***
+    temp1 = NBlades/2*(rootradius_R-r_R)/r_R*np.sqrt(1+((TSR*r_R)**2)/(a**2))
     Froot = np.array(2/np.pi*np.arccos(np.exp(temp1)))
     Froot[np.isnan(Froot)] = 0
     return Froot*Ftip, Ftip, Froot
@@ -108,7 +108,6 @@ def solveStreamtube(flowtype, rho, Uinf, r1_R, r2_R, rootradius_R, tipradius_R ,
     Omega -rotational velocity
     NBlades - number of blades in rotor
     """
-    #print("Hello")
     Area = np.pi*((r2_R*Radius)**2-(r1_R*Radius)**2) #  area streamtube
     r_R = (r1_R+r2_R)/2 # centroid
     
@@ -117,7 +116,7 @@ def solveStreamtube(flowtype, rho, Uinf, r1_R, r2_R, rootradius_R, tipradius_R ,
     aline = 0.0 # tangential induction factor
     
     Niterations = 100
-    Erroriterations =0.0000000001 # error limit for iteration process, in absolute value of induction
+    Erroriterations = 0.00001 # error limit for iteration process, in absolute value of induction
     
     for i in range(Niterations):
         # ///////////////////////////////////////////////////////////////////////
@@ -128,16 +127,13 @@ def solveStreamtube(flowtype, rho, Uinf, r1_R, r2_R, rootradius_R, tipradius_R ,
             Utan = (1+aline)*Omega*r_R*Radius # tangential velocity at rotor
         elif flowtype == 'propeller':
             Urotor = Uinf*(1+a) # axial velocity at rotor (propeller case)
-            Utan = (1-aline)*Omega*r_R*Radius # tangential velocity at rotor
+            Utan = (1+aline)*Omega*r_R*Radius # tangential velocity at rotor
         
-            
+        
         # calculate loads in blade segment in 2D (N/m)
         fnorm, ftan, gamma, alpha, inflowangle, ct, cn = loadBladeElement(rho, Urotor, Utan, r_R, chord, twist, polar_alpha, polar_cl, polar_cd)
         load3Daxial = fnorm*Radius*(r2_R-r1_R)*NBlades # 3D force in axial direction
         
-        # load3Dtan =loads[1]*Radius*(r2_R-r1_R)*NBlades # 3D force in azimuthal/tangential direction (not used here)
-               #Set nan to zero
-
         # ///////////////////////////////////////////////////////////////////////
         # //the block "Calculate velocity and loads at blade element" is done
         # ///////////////////////////////////////////////////////////////////////
@@ -153,7 +149,7 @@ def solveStreamtube(flowtype, rho, Uinf, r1_R, r2_R, rootradius_R, tipradius_R ,
         if flowtype == 'turbine':
             anew = ainduction(CT, True)
         elif flowtype == 'propeller':
-            anew = ainduction(CT, False)
+            anew = ainduction(CT, True)
         
         # correct new axial induction with Prandtl's correction
         Prandtl, Prandtltip, Prandtlroot = PrandtlTipRootCorrection(flowtype, r_R, rootradius_R, tipradius_R, Omega*Radius/Uinf, NBlades, anew);

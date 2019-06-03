@@ -30,37 +30,37 @@ t_start = time.time()
 #-------------------------------------------------------
 
 factor = 1
-delta = 0.025
+delta = 0.04
 #Blade discretisation parameters
-Ncp = 20
+Ncp = 25
 dis_mode = 'constant'
 reload = True
 order = 3
 
 #Vortex wake parameters
-n_r = 15
+n_r = 30
 n_pr = 40
 n_r_list = [1,2,3,4,5,10,25,50,100]
 lines = ['-x','-o','-s','-d','-^','--x','--o','--s','--d','--^']
 a_w_init = 0.3
-case = 'turbine'           #Choice between 'turbine' and 'propeller'
+case = 'turbine'             #Choice between 'turbine' and 'propeller'
 
 #Iteration parameters
 n_iterations = 10
 Error_margin = 0.001
 
 #Program modes
-Sensitivity = False        #Only runs if Double_rotor and BEM_compare == False
-BEM_compare = True       #Always false if Double_rotor = True
+Sensitivity = False          #Only runs if Double_rotor and BEM_compare == False
+BEM_compare = True           #Always false if Double_rotor = True
 Plot = True
 show_results_BEM = False
-plot_Wake = False
+plot_Wake = True
 
 #Model setup for double rotor configuration
 Double_rotor = False         #Set to True for double rotor configuration
-L_sep = 1.5                   #Separation distance between two rotors expressed 
-                            #in rotor diameter
-phase_dif = 0              #Phase difference in degrees                            
+L_sep = 1                    #Separation distance between two rotors expressed
+                             #in rotor diameter
+phase_dif = 0                #Phase difference in degrees
 
 #-----------------------------------------------
 #-------------(End) Setup Block-----------------
@@ -186,7 +186,7 @@ if not Sensitivity:
     
     #Setup Biot-Savart induction matrix for Gamma = 1
     if case == 'propeller':
-        Gamma_1 = 1
+        Gamma_1 = -1
     else:
         Gamma_1 = 1
         
@@ -209,6 +209,8 @@ if not Sensitivity:
     t_Gamma_end = time.time()
     print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
     
+    #Figure settings
+    plt.rcParams.update({'font.size': 22})
 #-----------------------------------------------
 #--(End) Main block 1: Initialise circulation---
 #-----------------------------------------------
@@ -226,7 +228,7 @@ if not Sensitivity:
         Wind = factor*Ind_Vel_Mat_w*Gamma
         
         #Update vortex rings with new a_w
-        if Double_rotor and case == 'turbine':
+        if Double_rotor:
             a_w_weights = np.sin(np.pi/Ncp*np.arange(Ncp)).reshape((Ncp,1))
             a_w = float(np.average(Uind[:Ncp],axis=0,weights=a_w_weights)/V.U0)
             Vortex_Wake = WG(case, V.U0, Omega, n_t, n_r, a_w, V.Nblades, R_disL*V.R, Chord_disL, Twist_disL, double=True, S_sep=L_sep, phase_dif=phase_dif)
@@ -269,6 +271,7 @@ if not Sensitivity:
         print(i_iter)
         i_iter += 1
     
+
 #-----------------------------------------------
 #----(End) Main block 2: Iterate circulation----
 #-----------------------------------------------

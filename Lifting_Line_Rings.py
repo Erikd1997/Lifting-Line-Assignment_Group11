@@ -113,6 +113,9 @@ def WakeGeometry(case, U_infty, omega, n_t, n_r, a_w, NBlades, R, chord, Twist, 
         if double:
             zmax = (S_sep + 2*R[-1])/2
             ax.set_zlim([-zmax,zmax])
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
         plt.show()
     return Rings
 
