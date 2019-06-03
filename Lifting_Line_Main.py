@@ -49,6 +49,9 @@ case = 'turbine'             #Choice between 'turbine' and 'propeller'
 n_iterations = 10
 Error_margin = 0.001
 
+#Plot settings
+FontSize = 22
+
 #Program modes
 Sensitivity = False          #Only runs if Double_rotor and BEM_compare == False
 BEM_compare = True           #Always false if Double_rotor = True
@@ -164,7 +167,9 @@ else:
     Fnorm_sens = np.zeros((len(n_t_lst),Ncp))
     Ftan_sens = np.zeros((len(n_t_lst),Ncp))
 print('Lifting line method for '+case+' has started')
-
+    
+#Figure settings
+plt.rcParams.update({'font.size': FontSize})
 #-----------------------------------------------
 #-------(End) Initialise problem setup----------
 #-----------------------------------------------
@@ -208,9 +213,7 @@ if not Sensitivity:
         Gamma = GF(case, V.rho, V.U0, Uind, Vind, Wind, Omega, controlpoints*V.R, Vortex_Wake, Twist_all_cp, polar_alpha, polar_cl, chord_all_cp)
     t_Gamma_end = time.time()
     print('Gamma is calculated in ',t_Gamma_end-t_Gamma_0,' seconds')
-    
-    #Figure settings
-    plt.rcParams.update({'font.size': 22})
+
 #-----------------------------------------------
 #--(End) Main block 1: Initialise circulation---
 #-----------------------------------------------
